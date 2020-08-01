@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Harry Tennis Game</title>
+        <!--@author Chanakya Lahiri-->
+    </head>
+    <body>
+        <canvas id="gameCanvas" width="1000" height="600">
+        </canvas>
+
+        <!--Javascript Analytics Section Start-->
+        <script>
+            var canvas;
+            var canvasContext;
+            var ballX = 50; //ball up and down
+            var ballY = 50; //ball direction
+            var ballSpeedX = 10; //ball x axis speed
+            var ballSpeedY = 4;  //ball y axis speed
+
+            var player1Score = 0;
+            var player2Score = 0;
+            const WINNING_SCORE=3;
+
+            var showingWinScreen=false; //when some player wins
+
+            var paddle1Y = 250;
+            var paddle2Y = 250;
+
+            const PADDLE_THICKNESS = 10;
+            const PADDLE_HEIGHT = 100;
+
+            function calculateMousePos(evt) //calculating the mouse position
+            {
+	            var rect = canvas.getBoundingClientRect();
+	            var root = document.documentElement;
+	            var mouseX = evt.clientX - rect.left - root.scrollLeft;
+	            var mouseY = evt.clientY - rect.top - root.scrollTop;
+                return {  //returns the current value of the position
+		            x:mouseX,
+		            y:mouseY //this is what we need since X remains same
+	            };
+            }
+
+            function handleMouseClick(evt) //after game finishes
+            {
+                if(showingWinScreen)
+                {
+                    player1Score=0;
+                    player2Score=0;
+                    showingWinScreen=false;
+                }
+            }
+
+            window.onload = function()
+            {
+                canvas=document.getElementById('gameCanvas');
+                canvasContext=canvas.getContext('2d');
+
+                var framesPerSecond=30;
+                setInterval(function()
+                                {
+                                    moveEverything();
+                                    drawEverything();
+                                },1000/framesPerSecond);
+                
+                canvas.addEventListener('mousedown',handleMouseClick); //after someone clicks
+
+                canvas.addEventListener('mousemove',function(evt)
+                {
+                    var mousePos=calculateMousePos(evt); //returns position everytime
+                    paddle1Y=mousePos.y-(PADDLE_HEIGHT/2); //storing in paddle1 Y value, middle position of mouse pointer
+                });
+            }
+            
+            function ballReset() //resetting the ball to the middle of the screen
+            {
+                if(player1Score >= WINNING_SCORE || player2Score>=WINNING_SCORE)
+                {
+                    showingWinScreen=true;
+                }
+                ballSpeedX=-ballSpeedX; //it would reset and also flip the balls direction
+                ballX=canvas.width/2;  //balls X axis
+                ballY=canvas.height/2; //balls Y axis
+            }
+
+            function computerMovement()
+            {
+                var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT/2); //giving the centerpoint of the paddle
+                if(paddle2YCenter < ballY-35)
+                {
+                    paddle2Y += 6; //following the ball position 
+                }
+                else if(paddle2YCenter > ballY+35)
+                {
+                    paddle2Y -= 6;
+                }
+            }
+
+            function moveEverything()
+            {
+                if(showingWinScreen) //if someone wins 
+                {
+                    canvasContext.fillStyle="white";
+                    canvasContext.fillText("Click to continue",100,100);
+                    return;
+                }
+                computerMovement();
+
+                ballX += ballSpeedX; //giving the ball speed
+                ballY += ballSpeedY; //giving the ball speed diagonally
+
+                if(ballX < 0) //bouncing the ball off left
+                {
+                    //ballSpeedX=-ballSpeedX; (this would flip the ball speed back reverse,ball would travel all over screen)
+                    if(ballY > paddle1Y && ballY < paddle1Y+PADDLE_HEIGHT)
+                    {
+                        ballSpeedX=-ballSpeedX;
+                        //giving the ball seperate angles upon contact with paddle
+                        var deltaY = ballY-(paddle1Y+PADDLE_HEIGHT/2);
+                        ballSpeedY=deltaY*0.35;
+                    }
+                    else
+                    {
+                        player2Score++; //MUST BE BEFORE RESET score increases
+                        ballReset();
+                    }
+                }
+
+                if(ballX > canvas.width) //bouncing the ball off right
+                {
+                    if(ballY > paddle2Y && ballY < paddle2Y+PADDLE_HEIGHT)
+                    {
+                        ballSpeedX=-ballSpeedX;
+                        //giving the ball seperate angles upon contact with paddle
+                        var deltaY = ballY-(paddle2Y+PADDLE_HEIGHT/2);
+                        ballSpeedY=deltaY*0.35;
+                    }
+                    else
+                    {
+                        player1Score++; // MUST BE BEFORE RESET increase score
+                        ballReset();
+                    }
+                }
+                
+                if(ballY < 0) //bouncing the ball off left
+                {
+                    ballSpeedY=-ballSpeedY;
+                }
+
+                if(ballY > canvas.height) //bouncing the ball off right
+                {
+                    ballSpeedY=-ballSpeedY;
+                }
+            }
+
+            function drawNet() //the middle net
+            {
+                for(var i=0;i<canvas.height;i+=40)
+                {
+                    colorRect(canvas.width/2-1,i,20,20,'white');
+                }
+            }
+
+            function drawEverything()
+            {
+                //coloring the screen
+                colorRect(0,0,canvas.width,canvas.height,'black');
+                
+                if(showingWinScreen) //if someone wins 
+                {
+                    canvasContext.fillStyle="white";
+
+                    if(player1Score >= WINNING_SCORE)
+                        canvasContext.fillText("Left Player Won!",canvas.width/2,canvas.height/2);
+                    else if(player2Score >= WINNING_SCORE)
+                        canvasContext.fillText("Right Player Won!",canvas.width/2,canvas.height/2);
+                    canvasContext.fillText("Click to continue",canvas.width/2,(canvas.height/2)+200);
+                    return;
+                }
+                drawNet(); //drawing the middle net
+                //making leftplayer paddle
+                colorRect(0,paddle1Y,PADDLE_THICKNESS,PADDLE_HEIGHT,'white');
+                //making rightplayer paddle
+                colorRect(canvas.width-PADDLE_THICKNESS,paddle2Y,PADDLE_THICKNESS,PADDLE_HEIGHT,'white');
+                //making of the ball
+                colorCircle(ballX,ballY,10,'white');
+
+                canvasContext.fillText(player1Score,100,100);
+                canvasContext.fillText(player2Score,canvas.width-100,100);
+            }
+
+            function colorRect(leftX,topY,width,height,drawColor)
+            {
+                canvasContext.fillStyle=drawColor;
+                canvasContext.fillRect(leftX,topY,width,height);
+            }
+
+            function colorCircle(centerX,centerY,radius,drawColor)
+            {
+                canvasContext.fillStyle=radius;
+                canvasContext.beginPath(); //because we would use fill function to call, hence needed
+                canvasContext.arc(centerX,centerY,radius,0,Math.PI*2,true);
+                //the part where the actual ball is made
+                //(xcord,ycord,center size,base,radian,makeit)
+                canvasContext.fill();
+            }
+        </script>
+        <!--Javascript Analytics Section End-->
+    </body>
+</html>
